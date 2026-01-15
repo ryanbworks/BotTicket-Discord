@@ -16,7 +16,9 @@ Bot de Discord completo para gerenciamento de tickets com painel de controle web
 
 ### 🎛️ Painel de Controle Web
 
--   🔐 Sistema de autenticação com JWT
+-   🔐 Sistema de autenticação seguro com JWT
+-   🔑 Primeiro acesso sem senha pré-definida (você define sua própria senha)
+-   🔒 Alteração de senha dentro do painel
 -   📊 Monitoramento em tempo real (CPU, RAM, Ping)
 -   📝 Editor de configuração (config.yml)
 -   📟 Console com logs do bot ao vivo
@@ -71,13 +73,22 @@ docker-compose logs -f
 
 Abra seu navegador em: **http://localhost:27015**
 
-**Primeiro Acesso:**
+**🔐 Autenticação - Primeiro Acesso:**
 
-No primeiro acesso, o sistema solicitará que você defina uma senha de administrador:
+O sistema possui autenticação segura sem credenciais pré-definidas. No primeiro acesso:
 
-1. O usuário padrão é: `admin`
-2. Defina uma senha segura (mínimo 6 caracteres)
+1. Usuário: `admin` (padrão)
+2. Você será solicitado a **definir sua própria senha** (mínimo 6 caracteres)
 3. Confirme a senha
+4. Pronto! Faça login com as credenciais que você criou
+
+**🔒 Segurança:**
+
+-   Senhas armazenadas com criptografia bcrypt
+-   Tokens JWT com validade de 7 dias
+-   Não existem senhas hardcoded no código
+-   Sistema de alteração de senha dentro do painel
+
 4. Após definir, faça login normalmente
 
 **Alterando a Senha:**

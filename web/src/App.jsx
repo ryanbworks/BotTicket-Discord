@@ -7,6 +7,7 @@ import {
     FileCode,
     Globe,
     HardDrive,
+    Key,
     LayoutDashboard,
     LogOut,
     Play,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import ChangePasswordModal from "./ChangePasswordModal";
 import Login from "./Login";
 
 // --- COMPONENTES AUXILIARES ---

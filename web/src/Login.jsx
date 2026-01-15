@@ -1,5 +1,6 @@
 import { Lock, User } from "lucide-react";
 import { useEffect, useState } from "react";
+import SetupPassword from "./SetupPassword";
 
 const Login = ({ onLoginSuccess }) => {
     const [username, setUsername] = useState("admin");
