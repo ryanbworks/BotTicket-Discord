@@ -49,6 +49,7 @@ const App = () => {
     const [configContent, setConfigContent] = useState("");
     const scrollRef = useRef(null);
     const socketRef = useRef(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     // Verificar autenticação ao carregar
     useEffect(() => {
@@ -267,11 +268,18 @@ const App = () => {
                 </nav>
 
                 {/* Logout no Sidebar */}
-                <div className="p-4 border-t border-slate-800">
+                <div className="p-4 border-t border-slate-800 space-y-2">
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-sm text-slate-400">Logado como:</span>
                         <span className="text-sm font-semibold text-white">{currentUser}</span>
                     </div>
+                    <button
+                        onClick={() => setShowPasswordModal(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm"
+                    >
+                        <Key size={16} />
+                        Alterar Senha
+                    </button>
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-colors text-sm"
@@ -528,6 +536,13 @@ const App = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; } 
       `,
                 }}
+            />
+
+            {/* Modal de Alterar Senha */}
+            <ChangePasswordModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                currentUser={currentUser}
             />
         </div>
     );

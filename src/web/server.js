@@ -5,7 +5,14 @@ import { createServer } from "http";
 import { dirname, join } from "path";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
-import { authenticateUser, authMiddleware, socketAuthMiddleware } from "./auth.js";
+import {
+    authenticateUser,
+    authMiddleware,
+    changePassword,
+    isFirstAccess,
+    setInitialPassword,
+    socketAuthMiddleware,
+} from "./auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,6 +38,42 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Rotas públicas (sem autenticação)
+
+// Verificar se é primeiro acesso
+app.post("/api/check-first-access", (req, res) => {
+    const { username } = req.body;
+
+    if (!username) {
+        return res.status(400).json({ error: "Usuário é obrigatório" });
+    }
+
+    const firstAccess = isFirstAccess(username);
+    res.json({ firstAccess });
+});
+
+// Definir senha inicial
+app.post("/api/set-initial-password", async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: "Usuário e senha são obrigatórios" });
+    }
+
+    if (password.length < 6) {
+        return res.status(400).json({ error: "A senha deve ter no mínimo 6 caracteres" });
+    }
+
+    const success = await setInitialPassword(username, password);
+
+    if (!success) {
+        return res
+            .status(400)
+            .json({ error: "Não foi possível definir a senha. O usuário pode já ter uma senha configurada." });
+    }
+
+    res.json({ success: true, message: "Senha definida com sucesso! Faça login agora." });
+});
+
 app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -62,6 +105,27 @@ app.post("/api/logout", (req, res) => {
 
 app.get("/api/me", authMiddleware, (req, res) => {
     res.json({ username: req.user.username });
+});
+
+// Trocar senha (rota protegida)
+app.post("/api/change-password", authMiddleware, async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: "A nova senha deve ter no mínimo 6 caracteres" });
+    }
+
+    const result = await changePassword(req.user.username, oldPassword, newPassword);
+
+    if (!result.success) {
+        return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, message: "Senha alterada com sucesso!" });
 });
 
 // Servir arquivos estáticos (deve vir depois das rotas de API)

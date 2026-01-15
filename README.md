@@ -71,12 +71,23 @@ docker-compose logs -f
 
 Abra seu navegador em: **http://localhost:27015**
 
-**Credenciais padrão:**
+**Primeiro Acesso:**
 
--   Usuário: `admin`
--   Senha: `admin123`
+No primeiro acesso, o sistema solicitará que você defina uma senha de administrador:
 
-⚠️ **IMPORTANTE:** Altere estas credenciais após o primeiro login!
+1. O usuário padrão é: `admin`
+2. Defina uma senha segura (mínimo 6 caracteres)
+3. Confirme a senha
+4. Após definir, faça login normalmente
+
+**Alterando a Senha:**
+
+Para trocar a senha posteriormente:
+
+1. Acesse o painel
+2. Clique em "Alterar Senha" no menu lateral
+3. Digite a senha atual e a nova senha
+4. Confirme as alterações
 
 ## 🛠️ Comandos Docker Úteis
 

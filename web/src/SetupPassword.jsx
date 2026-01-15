@@ -1,110 +1,51 @@
-import { Lock, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Key, Lock } from "lucide-react";
+import { useState } from "react";
 
-const Login = ({ onLoginSuccess }) => {
-    const [username, setUsername] = useState("admin");
+const SetupPassword = ({ onPasswordSet }) => {
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const [isFirstAccess, setIsFirstAccess] = useState(null);
-    const [checkingAccess, setCheckingAccess] = useState(true);
-
-    // Verificar se é primeiro acesso
-    useEffect(() => {
-        checkFirstAccess();
-    }, []);
-
-    const checkFirstAccess = async () => {
-        try {
-            const response = await fetch("/api/check-first-access", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ username: "admin" }),
-            });
-
-            const data = await response.json();
-            setIsFirstAccess(data.firstAccess);
-        } catch (err) {
-            console.error("Erro ao verificar primeiro acesso:", err);
-            setIsFirstAccess(false);
-        } finally {
-            setCheckingAccess(false);
-        }
-    };
-
-    const handlePasswordSet = () => {
-        setIsFirstAccess(false);
-        setError("");
-    };
 
     const handleSubmit = async e => {
         e.preventDefault();
         setError("");
+
+        if (password.length < 6) {
+            setError("A senha deve ter no mínimo 6 caracteres");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError("As senhas não coincidem");
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const response = await fetch("/api/login", {
+            const response = await fetch("/api/set-initial-password", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ username, password }),
-                credentials: "include",
+                body: JSON.stringify({ username: "admin", password }),
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Salvar token no localStorage também (para verificação no cliente)
-                localStorage.setItem("isAuthenticated", "true");
-                onLoginSuccess(data.username);
+                onPasswordSet();
             } else {
-                setError(data.error || "Erro ao fazer login");
+                setError(data.error || "Erro ao definir senha");
             }
         } catch (err) {
             setError("Erro de conexão com o servidor");
-            console.error("Erro ao fazer login:", err);
+            console.error("Erro ao definir senha:", err);
         } finally {
             setLoading(false);
         }
     };
-
-    // Mostrar loading enquanto verifica
-    if (checkingAccess) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 flex items-center justify-center">
-                <div className="text-white">
-                    <svg
-                        className="animate-spin h-8 w-8 mx-auto"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                        ></circle>
-                        <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                    </svg>
-                </div>
-            </div>
-        );
-    }
-
-    // Se for primeiro acesso, mostrar tela de configuração
-    if (isFirstAccess) {
-        return <SetupPassword onPasswordSet={handlePasswordSet} />;
-    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 flex items-center justify-center p-4">
@@ -113,38 +54,26 @@ const Login = ({ onLoginSuccess }) => {
                     {/* Logo/Título */}
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-red-600 rounded-full mb-4">
-                            <Lock className="w-8 h-8 text-white" />
+                            <Key className="w-8 h-8 text-white" />
                         </div>
-                        <h1 className="text-3xl font-bold text-white mb-2">FOZ RP</h1>
-                        <p className="text-slate-400">Painel de Controle</p>
+                        <h1 className="text-3xl font-bold text-white mb-2">Primeiro Acesso</h1>
+                        <p className="text-slate-400">Defina sua senha de administrador</p>
+                    </div>
+
+                    {/* Info Box */}
+                    <div className="bg-blue-500/10 border border-blue-500/50 rounded-lg p-4 mb-6">
+                        <p className="text-blue-400 text-sm">
+                            <strong>Importante:</strong> Esta será a senha de acesso ao painel. Guarde-a em local
+                            seguro!
+                        </p>
                     </div>
 
                     {/* Formulário */}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Campo de Usuário */}
-                        <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
-                                Usuário
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    id="username"
-                                    value={username}
-                                    onChange={e => setUsername(e.target.value)}
-                                    className="w-full bg-slate-900/50 border border-slate-600 rounded-lg py-2.5 pl-11 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                    placeholder="Digite seu usuário"
-                                    required
-                                    autoComplete="username"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Campo de Senha */}
+                        {/* Campo de Nova Senha */}
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                                Senha
+                                Nova Senha
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -154,9 +83,29 @@ const Login = ({ onLoginSuccess }) => {
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     className="w-full bg-slate-900/50 border border-slate-600 rounded-lg py-2.5 pl-11 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                    placeholder="Digite sua senha"
+                                    placeholder="Digite sua senha (mín. 6 caracteres)"
                                     required
-                                    autoComplete="current-password"
+                                    minLength={6}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Campo de Confirmar Senha */}
+                        <div>
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
+                                Confirmar Senha
+                            </label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                <input
+                                    type="password"
+                                    id="confirmPassword"
+                                    value={confirmPassword}
+                                    onChange={e => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-slate-900/50 border border-slate-600 rounded-lg py-2.5 pl-11 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    placeholder="Digite a senha novamente"
+                                    required
+                                    minLength={6}
                                 />
                             </div>
                         </div>
@@ -168,7 +117,7 @@ const Login = ({ onLoginSuccess }) => {
                             </div>
                         )}
 
-                        {/* Botão de Login */}
+                        {/* Botão de Confirmar */}
                         <button
                             type="submit"
                             disabled={loading}
@@ -196,17 +145,19 @@ const Login = ({ onLoginSuccess }) => {
                                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                         ></path>
                                     </svg>
-                                    Entrando...
+                                    Definindo...
                                 </>
                             ) : (
-                                "Entrar"
+                                "Definir Senha"
                             )}
                         </button>
                     </form>
 
                     {/* Rodapé */}
                     <div className="mt-6 text-center text-sm text-slate-500">
-                        <p>Apenas administradores têm acesso</p>
+                        <p>
+                            Usuário padrão: <strong className="text-slate-400">admin</strong>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -214,4 +165,4 @@ const Login = ({ onLoginSuccess }) => {
     );
 };
 
-export default Login;
+export default SetupPassword;

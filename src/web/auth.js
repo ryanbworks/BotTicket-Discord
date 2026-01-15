@@ -1,16 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { getDatabase } from "../lib/database.js";
 
 // Chave secreta para JWT (deve estar no .env em produção)
 const JWT_SECRET = process.env.JWT_SECRET || "fozbot-secret-key-change-in-production";
-
-// Usuários do sistema (em produção, use banco de dados)
-const users = [
-    {
-        username: "admin",
-        passwordHash: "$2a$10$plU0Chh2fDsxwqOFdVstP.5UMb5AkzqFKBLAfm4oUVxgBXr8XfUoi",
-    },
-];
 
 // Gerar hash de senha (para criar novos usuários)
 export async function hashPassword(password) {
@@ -22,16 +15,72 @@ export async function verifyPassword(password, hash) {
     return await bcrypt.compare(password, hash);
 }
 
+// Verificar se é primeiro acesso (senha não definida)
+export function isFirstAccess(username) {
+    const db = getDatabase();
+    const user = db.prepare("SELECT password_hash FROM panel_users WHERE username = ?").get(username);
+    return user && user.password_hash === null;
+}
+
+// Definir senha inicial
+export async function setInitialPassword(username, password) {
+    const db = getDatabase();
+    const passwordHash = await hashPassword(password);
+
+    const result = db
+        .prepare(
+            `
+        UPDATE panel_users 
+        SET password_hash = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE username = ? AND password_hash IS NULL
+    `
+        )
+        .run(passwordHash, username);
+
+    return result.changes > 0;
+}
+
+// Alterar senha (apenas se já estiver autenticado)
+export async function changePassword(username, oldPassword, newPassword) {
+    const db = getDatabase();
+    const user = db.prepare("SELECT password_hash FROM panel_users WHERE username = ?").get(username);
+
+    if (!user || !user.password_hash) {
+        return { success: false, error: "Usuário não encontrado" };
+    }
+
+    const isValid = await verifyPassword(oldPassword, user.password_hash);
+    if (!isValid) {
+        return { success: false, error: "Senha atual incorreta" };
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    db.prepare(
+        `
+        UPDATE panel_users 
+        SET password_hash = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE username = ?
+    `
+    ).run(newPasswordHash, username);
+
+    return { success: true };
+}
+
 // Autenticar usuário
 export async function authenticateUser(username, password) {
-    const user = users.find(u => u.username === username);
+    const db = getDatabase();
+    const user = db.prepare("SELECT username, password_hash FROM panel_users WHERE username = ?").get(username);
 
     if (!user) {
         return null;
     }
 
-    const isValid = await verifyPassword(password, user.passwordHash);
+    // Se não tem senha definida (primeiro acesso), não permite login
+    if (user.password_hash === null) {
+        return null;
+    }
 
+    const isValid = await verifyPassword(password, user.password_hash);
     if (!isValid) {
         return null;
     }

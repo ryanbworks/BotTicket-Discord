@@ -100,6 +100,18 @@ export function initDatabase() {
 
         -- Índice para alertas pendentes
         CREATE INDEX IF NOT EXISTS idx_alerts_status ON ticket_alerts(status, expires_at);
+
+        -- Tabela de usuários do painel
+        CREATE TABLE IF NOT EXISTS panel_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Criar usuário admin se não existir
+        INSERT OR IGNORE INTO panel_users (username, password_hash) VALUES ('admin', NULL);
     `);
 
     console.log("✅ Banco de dados inicializado!");
