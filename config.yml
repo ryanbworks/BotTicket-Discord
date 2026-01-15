@@ -1,0 +1,646 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                          FOZ RP - Sistema de Suporte                       ║
+# ║                            Configuração do Bot                             ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                          CONFIGURAÇÕES GERAIS                              │
+# │                                                                            │
+# │  status     → Status do bot no Discord                                     │
+# │               Opções: "online", "idle", "dnd", "invisible"                 │
+# │                                                                            │
+# │  activity   → Atividade exibida no perfil do bot                           │
+# │    type     → Tipo de atividade                                            │
+# │               Opções: "PLAYING", "STREAMING", "LISTENING",                 │
+# │                       "WATCHING", "COMPETING"                              │
+# │    text     → Texto exibido (ex: "FOZ RP | Suporte")                       │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+bot:
+    prefix: ""
+
+    # Status: "online" (verde), "idle" (amarelo), "dnd" (vermelho), "invisible" (offline)
+    status: "online"
+
+    activity:
+        # Tipo: "PLAYING" (Jogando), "STREAMING" (Transmitindo), "LISTENING" (Ouvindo),
+        #       "WATCHING" (Assistindo), "COMPETING" (Competindo)
+        type: "LISTENING"
+        text: "FOZ RP | BEST SERVER"
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                              APARÊNCIA                                     │
+# │                                                                            │
+# │  colors     → Cores em formato hexadecimal (#RRGGBB)                       │
+# │               Usado nas embeds do bot                                      │
+# │                                                                            │
+# │  footer     → Texto exibido no rodapé de todas as embeds                   │
+# │  iconUrl    → URL de imagem para o ícone (opcional)                        │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+appearance:
+    colors:
+        primary: "#1a1a2e" # Cor principal das embeds
+        success: "#16a34a" # Cor de sucesso (verde)
+        warning: "#d97706" # Cor de aviso (laranja)
+        error: "#dc2626" # Cor de erro (vermelho)
+        info: "#2563eb" # Cor informativa (azul)
+
+    footer: "FOZ RP © 2025 — Todos os direitos reservados"
+    iconUrl: ""
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                        CATEGORIAS DE TICKETS                               │
+# │                                                                            │
+# │  VARIÁVEIS DISPONÍVEIS:                                                    │
+# │                                                                            │
+# │  Para channelName (nome do canal):                                         │
+# │    {number}    → Número do ticket (ex: 0001, 0002)                         │
+# │    {username}  → Nome do usuário (sem espaços/caracteres especiais)        │
+# │    {userid}    → ID do usuário do Discord                                  │
+# │    {category}  → ID da categoria do ticket                                 │
+# │                                                                            │
+# │  Para openingMessage (mensagem de abertura):                               │
+# │    {user}      → Menção do usuário (@usuario)                              │
+# │    {username}  → Nome do usuário                                           │
+# │    {userid}    → ID do usuário                                             │
+# │    {category}  → Nome da categoria                                         │
+# │                                                                            │
+# │  Exemplo de channelName:                                                   │
+# │    "ticket-{number}"        → ticket-0001                                  │
+# │    "{username}-{number}"    → joao-0001                                    │
+# │    "suporte-{userid}"       → suporte-123456789                            │
+# │                                                                            │
+# │  CONFIGURAÇÕES:                                                            │
+# │    memberLimit  → Máximo de tickets por usuário nesta categoria            │
+# │    totalLimit   → Máximo de tickets abertos na categoria                   │
+# │    cooldown     → Tempo entre tickets (em milissegundos)                   │
+# │                   60000 = 1 minuto | 300000 = 5 min | 600000 = 10 min      │
+# │                   1800000 = 30 min | 3600000 = 1 hora | 86400000 = 24h     │
+# │                                                                            │
+# │  PERGUNTAS (questions):                                                    │
+# │    style: "short"     → Campo de texto curto (1 linha)                     │
+# │    style: "paragraph" → Campo de texto longo (múltiplas linhas)            │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+categories:
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SUPORTE GERAL
+    # ═══════════════════════════════════════════════════════════════════════════
+    - id: "suporte"
+      name: "Suporte Geral"
+      description: "Dúvidas, problemas técnicos e assistência geral"
+      emoji: "🎧"
+      discordCategory: "1453012391712391260"
+      staffRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+          - "1336355741598224404" # MODERADOR
+      pingRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+          - "1336355741598224404" # MODERADOR
+      channelName: "suporte-{username}"
+      openingMessage: |
+          ## 🎧 Atendimento FOZ RP
+
+          Olá, {user}.
+
+          Seu ticket de **Suporte Geral** foi aberto com sucesso.
+          Um membro da nossa equipe irá atendê-lo em breve.
+
+          ───────────────────────────────
+
+          **Informações importantes:**
+          • Descreva seu problema de forma clara e objetiva
+          • Forneça prints ou vídeos se necessário
+          • Aguarde pacientemente — não abra múltiplos tickets
+
+          ───────────────────────────────
+
+      memberLimit: 1
+      totalLimit: 50
+      questions:
+          - label: "Assunto do atendimento"
+            placeholder: "Ex: Problema com veículo, dúvida sobre regras..."
+            required: true
+            minLength: 5
+            maxLength: 100
+            style: "short"
+          - label: "Descreva detalhadamente sua situação"
+            placeholder: "Forneça todos os detalhes relevantes para agilizar o atendimento..."
+            required: true
+            minLength: 20
+            maxLength: 1000
+            style: "paragraph"
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # DENÚNCIA DE JOGADOR
+    # ═══════════════════════════════════════════════════════════════════════════
+    - id: "denuncia"
+      name: "Denúncia"
+      description: "Denunciar jogadores por violação de regras"
+      emoji: "⚖️"
+      discordCategory: "1453218413437784064"
+      staffRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+      pingRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+      channelName: "denuncia-{username}"
+      openingMessage: |
+          ## ⚖️ Central de Denúncias — FOZ RP
+
+          {user}, sua denúncia foi registrada.
+
+          ───────────────────────────────
+
+          **ATENÇÃO — LEIA COM CUIDADO:**
+
+          ⚠️ Denúncias **sem provas** serão automaticamente arquivadas.
+          ⚠️ Denúncias **falsas** resultarão em punição ao denunciante.
+          ⚠️ Provas devem ser **claras e não editadas**.
+
+          **Provas aceitas:**
+          • Vídeos (YouTube, Streamable, Medal)
+          • Screenshots com contexto
+          • Logs de chat (se aplicável)
+
+          ───────────────────────────────
+
+          *Anexe suas provas abaixo e aguarde a análise.*
+      memberLimit: 1
+      totalLimit: 30
+      questions:
+          - label: "Nick do jogador denunciado"
+            placeholder: "Nome exato do jogador no servidor"
+            required: true
+            minLength: 2
+            maxLength: 50
+            style: "short"
+          - label: "Regra violada"
+            placeholder: "Ex: RDM, VDM, Anti-RP, Metagaming, Powergaming..."
+            required: true
+            minLength: 2
+            maxLength: 100
+            style: "short"
+          - label: "Descrição da ocorrência"
+            placeholder: "Descreva o que aconteceu, quando e onde. Seja objetivo."
+            required: true
+            minLength: 30
+            maxLength: 1000
+            style: "paragraph"
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # REPORT DE BUG / FALHA
+    # ═══════════════════════════════════════════════════════════════════════════
+    - id: "bug"
+      name: "Report de Bug"
+      description: "Reportar bugs, falhas ou exploits do servidor"
+      emoji: "🔧"
+      discordCategory: "1453218503434834060"
+      staffRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+          - "1336355741598224404" # MODERADOR
+      pingRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+          - "1336355741598224404" # MODERADOR
+      channelName: "bug-{username}"
+      openingMessage: |
+          ## 🔧 Report Técnico — FOZ RP
+
+          {user}, seu report foi recebido pela equipe de desenvolvimento.
+
+          ───────────────────────────────
+
+          **Para agilizar a correção, forneça:**
+
+          • **Descrição clara** do bug
+          • **Passos para reproduzir** o problema
+          • **Frequência** (sempre acontece ou aleatório?)
+          • **Evidências** (prints, vídeos)
+
+          ───────────────────────────────
+
+          ⚠️ **IMPORTANTE:** Abusar de bugs/exploits resultará em banimento permanente.
+          Se você descobriu um exploit crítico, **não compartilhe com outros jogadores**.
+
+          *Nossa equipe irá analisar e responder assim que possível.*
+      memberLimit: 2
+      totalLimit: 40
+      questions:
+          - label: "Título do Bug"
+            placeholder: "Ex: Veículo atravessando parede, dinheiro sumindo..."
+            required: true
+            minLength: 5
+            maxLength: 100
+            style: "short"
+          - label: "Descrição detalhada"
+            placeholder: "O que acontece, quando acontece, como reproduzir..."
+            required: true
+            minLength: 30
+            maxLength: 1000
+            style: "paragraph"
+          - label: "Localização no mapa (se aplicável)"
+            placeholder: "Ex: Garagem central, Delegacia LS..."
+            required: false
+            maxLength: 100
+            style: "short"
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # APELAÇÃO / REVISÃO DE BAN
+    # ═══════════════════════════════════════════════════════════════════════════
+    - id: "unban"
+      name: "Apelação de Ban"
+      description: "Solicitar revisão de banimento"
+      emoji: "📋"
+      discordCategory: "1453218605742297249"
+      staffRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+      pingRoles:
+          - "1336356851490488371" # COORD
+          - "1336356586943283291" # ADMIN
+      channelName: "apelacao-{username}"
+      openingMessage: |
+          ## 📋 Apelação de Banimento — FOZ RP
+
+          {user}, sua solicitação de revisão foi registrada.
+
+          ───────────────────────────────
+
+          **INFORMAÇÕES SOBRE APELAÇÕES:**
+
+          • Apelações são analisadas **individualmente** pela administração
+          • O prazo de resposta é de **até 72 horas**
+          • Mentir ou omitir informações resultará em **negação automática**
+          • Você tem direito a **1 apelação por ban**
+
+          ───────────────────────────────
+
+          **Critérios de análise:**
+          ✓ Histórico do jogador no servidor
+          ✓ Gravidade da infração cometida
+          ✓ Tempo decorrido desde o ban
+          ✓ Demonstração de arrependimento
+
+          ───────────────────────────────
+
+          *Aguarde a análise da administração. Não mencione membros da staff.*
+      memberLimit: 1
+      totalLimit: 15
+      questions:
+          - label: "Seu nick no FOZ RP"
+            placeholder: "Nome exato que você usava no servidor"
+            required: true
+            minLength: 2
+            maxLength: 50
+            style: "short"
+          - label: "Data aproximada do banimento"
+            placeholder: "Ex: 15/12/2024 ou há 2 semanas"
+            required: true
+            maxLength: 50
+            style: "short"
+          - label: "Motivo do seu banimento"
+            placeholder: "Seja honesto sobre o que aconteceu"
+            required: true
+            minLength: 10
+            maxLength: 500
+            style: "paragraph"
+          - label: "Por que devemos considerar sua apelação?"
+            placeholder: "Explique por que você merece uma segunda chance..."
+            required: true
+            minLength: 50
+            maxLength: 1000
+            style: "paragraph"
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # FINANCEIRO
+    # ═══════════════════════════════════════════════════════════════════════════
+    - id: "financeiro"
+      name: "Financeiro"
+      description: "Solicitações e dúvidas financeiras (doações, pagamentos, etc.)"
+      emoji: "💰"
+      discordCategory: "1453217667434418280"
+      staffRoles:
+          - "702555347864387684" # FUNDADOR
+      pingRoles:
+          - "702555347864387684" # FUNDADOR
+      channelName: "financeiro-{username}"
+      openingMessage: |
+          ## 💰 Atendimento Financeiro — FOZ RP
+
+          Olá, {user}.
+
+          Seu ticket de **Financeiro** foi aberto com sucesso.
+          Um membro da equipe responsável irá atendê-lo em breve.
+
+          ───────────────────────────────
+
+          **Exemplos de assuntos:**
+          • Dúvidas sobre doações
+          • Pagamentos pendentes
+          • Solicitação de comprovantes
+          • Outros assuntos financeiros
+
+          ───────────────────────────────
+
+          *Aguarde o atendimento. Não envie informações sensíveis no ticket.*
+      memberLimit: 1
+      totalLimit: 10
+      questions:
+          - label: "Qual o motivo do seu contato?"
+            placeholder: "Ex: Doação, pagamento, dúvida sobre saldo..."
+            required: true
+            minLength: 5
+            maxLength: 100
+            style: "short"
+          - label: "Descreva sua solicitação"
+            placeholder: "Explique detalhadamente sua dúvida ou pedido."
+            required: true
+            minLength: 20
+            maxLength: 1000
+            style: "paragraph"
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                         PAINEL DE TICKETS                                  │
+# │                                                                            │
+# │  type       → Tipo de seleção no painel                                    │
+# │              Opções: "buttons" (botões), "selectMenu" (menu dropdown)      │
+# │                                                                            │
+# │  horario    → Horário de atendimento da equipe                             │
+# │              Use {horario} na descrição para exibir automaticamente        │
+# │              Exemplo: "14:00 às 23:00" ou "09:00 às 18:00"                  │
+# │                                                                            │
+# │  image      → URL de imagem grande na embed (opcional)                     │
+# │  thumbnail  → URL de imagem pequena no canto (opcional)                    │
+# │  color      → Cor da embed em hexadecimal (#RRGGBB)                        │
+# │                                                                            │
+# │  categories → Lista de IDs das categorias que aparecerão no painel         │
+# │              (use os "id" definidos nas categorias acima)                  │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+panels:
+    - id: "main-panel"
+      channelId: "1432224022271230053"
+
+      # Tipo de seleção: "buttons" (botões) ou "selectMenu" (lista dropdown)
+      type: "selectMenu"
+
+      title: "Central de Atendimento"
+
+      # Horário de atendimento exibido no painel
+      # Defina os horários que sua equipe está disponível
+      horario: "14:00 às 22:00"
+
+      description: |
+          Selecione abaixo a categoria correspondente à sua necessidade.
+
+          ───────────────────────────────
+
+          🕐 **Horário de Atendimento**
+          Segunda a Domingo — **{horario}**
+
+          ───────────────────────────────
+
+          *Não abra tickets desnecessários.*
+
+      image: ""
+      thumbnail: "https://images-ext-1.discordapp.net/external/-xBjETShDsoTUCOYzMaMoIma1nQidI0ZGS0B7-X0Vsg/https/i.imgur.com/lk4q9ll.gif?width=902&height=902"
+      color: "#dc2626"
+      categories:
+          - "suporte"
+          - "denuncia"
+          - "bug"
+          - "unban"
+          - "financeiro"
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                              LOGS                                          │
+# │                                                                            │
+# │  enabled   → Ativa/desativa o sistema de logs (true/false)                │
+# │  channelId → ID do canal onde os logs serão enviados                       │
+# │                                                                            │
+# │  events    → Quais eventos serão logados (true/false para cada):          │
+# │    ticketCreate   → Quando um ticket é criado                              │
+# │    ticketClose    → Quando um ticket é fechado                             │
+# │    ticketReopen   → Quando um ticket é reaberto                            │
+# │    ticketClaim    → Quando um staff assume o ticket                        │
+# │    ticketUnclaim  → Quando um staff libera o ticket                        │
+# │    userAdd        → Quando um usuário é adicionado ao ticket               │
+# │    userRemove     → Quando um usuário é removido do ticket                 │
+# │    ticketRename   → Quando o ticket é renomeado                            │
+# │    ticketTransfer → Quando o ticket é transferido de categoria             │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+logging:
+    enabled: true
+    channelId: "1453220155524911308"
+    events:
+        ticketCreate: true
+        ticketClose: true
+        ticketReopen: true
+        ticketClaim: true
+        ticketUnclaim: true
+        userAdd: true
+        userRemove: true
+        ticketRename: true
+        ticketTransfer: true
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                           TRANSCRIÇÕES                                     │
+# │                                                                            │
+# │  enabled            → Ativa/desativa transcrições (true/false)            │
+# │  channelId          → Canal onde as transcrições serão salvas              │
+# │                                                                            │
+# │  format             → Formato do arquivo de transcrição                    │
+# │                       Opções: "html" (visual bonito)                       │
+# │                               "json" (dados brutos)                        │
+# │                               "text" (texto simples)                       │
+# │                                                                            │
+# │  sendToUser         → Enviar transcrição via DM ao usuário (true/false)    │
+# │  includeAttachments → Incluir imagens/anexos na transcrição (true/false)  │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+transcripts:
+    enabled: true
+    channelId: "1453215195806826536"
+    format: "html"
+    sendToUser: true
+    includeAttachments: true
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                         AVALIAÇÃO DE ATENDIMENTO                            │
+# │                                                                            │
+# │  enabled     → Ativa/desativa sistema de avaliação (true/false)           │
+# │  channelId   → Canal onde as avaliações serão enviadas                     │
+# │                                                                            │
+# │  Quando um ticket é fechado, o usuário recebe uma mensagem via DM          │
+# │  pedindo para avaliar o atendimento de 1 a 5 estrelas.                     │
+# │  A avaliação é enviada para o canal configurado.                           │
+# │                                                                            │
+# │  VARIÁVEIS DISPONÍVEIS em requestMessage:                                  │
+# │    {ticket}   → Número do ticket (ex: #0001)                               │
+# │    {category} → Nome da categoria do ticket                                │
+# │    {user}     → Menção do usuário                                          │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+ratings:
+    # Ativar sistema de avaliação
+    enabled: true
+
+    # Canal onde as avaliações serão postadas
+    channelId: "1432224023265280112"
+
+    # Mensagem enviada via DM pedindo avaliação
+    requestMessage: |
+        Seu ticket **{ticket}** na categoria **{category}** foi encerrado.
+
+        Por favor, avalie o atendimento que você recebeu.
+        Sua opinião é muito importante para nós!
+
+    # Mensagem após o usuário avaliar
+    thankYouMessage: "Obrigado pela sua avaliação! Sua opinião nos ajuda a melhorar nosso atendimento."
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                         FECHAMENTO AUTOMÁTICO                              │
+# │                                                                            │
+# │  enabled        → Ativa/desativa fechamento automático (true/false)       │
+# │                                                                            │
+# │  inactivityTime → Tempo de inatividade para fechar (em milissegundos)     │
+# │  warningTime    → Tempo antes do fechamento para enviar aviso (ms)        │
+# │                                                                            │
+# │  REFERÊNCIA DE TEMPOS:                                                     │
+# │    60000     = 1 minuto                                                    │
+# │    300000    = 5 minutos                                                   │
+# │    600000    = 10 minutos                                                  │
+# │    1800000   = 30 minutos                                                  │
+# │    3600000   = 1 hora                                                      │
+# │    7200000   = 2 horas                                                     │
+# │    14400000  = 4 horas                                                     │
+# │    43200000  = 12 horas                                                    │
+# │    86400000  = 24 horas (1 dia)                                            │
+# │    604800000 = 7 dias                                                      │
+# │                                                                            │
+# │  warningMessage → Mensagem enviada antes do fechamento                    │
+# │  closeMessage   → Mensagem enviada ao fechar automaticamente              │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                         SISTEMA DE ALERTAS (/alertar)                      │
+# │                                                                            │
+# │  enabled      → Ativa/desativa o comando /alertar (true/false)            │
+# │  defaultTime  → Tempo padrão em minutos se não especificado               │
+# │  adminRoles   → IDs dos cargos que podem usar o comando                   │
+# │                 (além dos staffRoles de cada categoria)                    │
+# │                                                                            │
+# │  VARIÁVEIS DISPONÍVEIS em alertMessage:                                    │
+# │    {user}     → Menção do usuário do ticket                                │
+# │    {tempo}    → Tempo restante para fechamento                             │
+# │                                                                            │
+# │  O sistema verifica alertas expirados a cada 1 minuto e fecha              │
+# │  automaticamente os tickets onde o usuário não respondeu.                  │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+alerts:
+    # Ativar sistema de alertas
+    enabled: true
+
+    # Tempo padrão em minutos (se o staff não especificar)
+    defaultTime: 30
+
+    # Cargos que podem usar /alertar (além dos staffRoles das categorias)
+    adminRoles:
+        - "COLOQUE_O_ID_DO_CARGO_ADMIN_AQUI"
+
+    # Mensagem de alerta enviada no ticket
+    alertMessage: |
+        **{user}**, este ticket será **fechado automaticamente** em **{tempo}** se não houver resposta.
+
+        Por favor, responda para manter o ticket aberto.
+
+    # Mensagem quando o ticket é fechado por não resposta
+    closeMessage: |
+        ## 🔒 Ticket Encerrado por Inatividade
+
+        Este ticket foi fechado automaticamente pois não houve resposta ao alerta enviado.
+
+        Caso precise de mais assistência, abra um novo ticket na Central de Atendimento.
+
+autoClose:
+    enabled: true
+    inactivityTime: 86400000
+    warningTime: 7200000
+    warningMessage: |
+        ## ⚠️ Aviso de Inatividade
+
+        Este ticket será **fechado automaticamente em 2 horas** por falta de atividade.
+
+        Se você ainda precisa de assistência, envie uma mensagem para manter o ticket aberto.
+    closeMessage: |
+        ## 🔒 Ticket Encerrado
+
+        Este ticket foi fechado automaticamente por inatividade.
+
+        Caso precise de mais assistência, abra um novo ticket na Central de Atendimento.
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                         MENSAGENS DO SISTEMA                               │
+# │                                                                            │
+# │  VARIÁVEIS DISPONÍVEIS NAS MENSAGENS:                                      │
+# │                                                                            │
+# │  {user}    → Menção do usuário (@usuario)                                  │
+# │  {channel} → Menção do canal (#canal)                                      │
+# │  {time}    → Tempo formatado (ex: "5 minutos")                             │
+# │  {name}    → Nome (usado em renomear)                                      │
+# │  {id}      → Número do ticket                                              │
+# │                                                                            │
+# │  Você pode personalizar todas as mensagens abaixo.                         │
+# │  Use **texto** para negrito e *texto* para itálico (Markdown).            │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+messages:
+    errors:
+        noPermission: "Você não possui permissão para executar esta ação."
+        ticketLimitReached: "Você já possui um ticket aberto nesta categoria. Aguarde o atendimento ou feche o ticket existente."
+        totalLimitReached: "O limite de tickets desta categoria foi atingido. Tente novamente mais tarde."
+        cooldownActive: "Aguarde **{time}** antes de abrir outro ticket nesta categoria."
+        ticketNotFound: "Ticket não encontrado ou canal inválido."
+        alreadyClaimed: "Este ticket já está sendo atendido por outro membro da equipe."
+        notClaimed: "Este ticket não está atribuído a nenhum atendente."
+        cannotCloseOther: "Você não pode encerrar um ticket que está sendo atendido por outro membro."
+        userNotInTicket: "Este usuário não faz parte deste ticket."
+        userAlreadyInTicket: "Este usuário já tem acesso a este ticket."
+        cannotAddStaff: "Membros da equipe já possuem acesso automático aos tickets."
+
+    success:
+        ticketCreated: "Seu ticket foi criado com sucesso: {channel}"
+        ticketClosed: "Ticket encerrado."
+        ticketReopened: "Ticket reaberto com sucesso."
+        ticketClaimed: "Você assumiu o atendimento deste ticket."
+        ticketUnclaimed: "Você não é mais responsável por este ticket."
+        userAdded: "{user} foi adicionado ao ticket."
+        userRemoved: "{user} foi removido do ticket."
+        ticketRenamed: "Ticket renomeado para: {name}"
+        panelSent: "Painel de atendimento enviado."
+
+    buttons:
+        close: "Encerrar"
+        closeWithReason: "Encerrar com motivo"
+        claim: "Assumir"
+        unclaim: "Liberar"
+        transcript: "Transcrição"
+        reopen: "Reabrir"
+        delete: "Excluir"
+        confirmClose: "Confirmar"
+        cancelClose: "Cancelar"
+
+    misc:
+        claimedBy: "Atendente: {user}"
+        createdBy: "Solicitante: {user}"
+        closedBy: "Encerrado por: {user}"
+        ticketId: "Ticket #{id}"
+        noReason: "Motivo não informado"

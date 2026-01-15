@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+    fozbot:
+        build: .
+        container_name: fozbot-panel
+        restart: unless-stopped
+        ports:
+            - "27015:27015"
+        env_file:
+            - .env
+        environment:
+            - NODE_ENV=production
+            - WEB_PORT=27015
+        volumes:
+            # Persistir banco de dados
+            - ./data:/app/data
+            # Persistir configuração
+            - ./config.yml:/app/config.yml
+        networks:
+            - fozbot-network
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+networks:
+    fozbot-network:
+        driver: bridge
