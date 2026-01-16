@@ -46,7 +46,7 @@ export function stopAlertChecker() {
  */
 async function checkExpiredAlerts(client) {
     try {
-        const expiredAlerts = getExpiredAlerts();
+        const expiredAlerts = await getExpiredAlerts();
 
         if (expiredAlerts.length === 0) return;
 
@@ -62,7 +62,7 @@ async function checkExpiredAlerts(client) {
 
                 if (!channel) {
                     // Canal não existe mais, marcar como executado
-                    markAlertExecuted(alert.id);
+                    await markAlertExecuted(alert.id);
                     continue;
                 }
 
@@ -98,7 +98,7 @@ async function checkExpiredAlerts(client) {
                 }));
 
                 // Marcar alerta como executado antes de fechar
-                markAlertExecuted(alert.id);
+                await markAlertExecuted(alert.id);
 
                 // Fechar o ticket
                 await manager.close(channel, alertedBy, `Fechado automaticamente - sem resposta ao alerta`);
@@ -107,7 +107,7 @@ async function checkExpiredAlerts(client) {
             } catch (error) {
                 console.error(`Erro ao processar alerta ${alert.id}:`, error.message);
                 // Marcar como executado mesmo em caso de erro para não ficar em loop
-                markAlertExecuted(alert.id);
+                await markAlertExecuted(alert.id);
             }
         }
     } catch (error) {

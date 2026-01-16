@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
 
 export async function execute(interaction, client) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 }); // 64 = Ephemeral
 
     const config = getConfig();
     const panelId = interaction.options.getString("painel_id");
@@ -69,7 +69,7 @@ export async function execute(interaction, client) {
     const embed = new EmbedBuilder()
         .setTitle(panel.title || "🎫 Sistema de Tickets")
         .setDescription(description)
-        .setColor(panel.color || colors.primary)
+        .setColor(panel.color || colors.error)
         .setTimestamp();
 
     if (panel.image) {

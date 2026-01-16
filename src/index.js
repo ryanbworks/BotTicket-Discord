@@ -26,12 +26,6 @@ console.log("║           FOZ RP — Sistema de Suporte              ║");
 console.log("║                    v1.0.0                          ║");
 console.log("╚════════════════════════════════════════════════════╝\n");
 
-// Carregar configuração
-loadConfig();
-
-// Inicializar banco de dados
-initDatabase();
-
 // Variável para armazenar o cliente atual
 let currentClient = null;
 
@@ -91,6 +85,12 @@ async function loadEvents() {
 
 // Inicializar
 async function init() {
+    // Carregar configuração
+    loadConfig();
+
+    // Inicializar banco de dados
+    await initDatabase();
+
     // Se já existe um cliente, destruir antes de criar novo
     if (currentClient && currentClient.isReady()) {
         console.log("⚠️  Destruindo cliente anterior...");
@@ -140,7 +140,14 @@ process.on("uncaughtException", error => {
     console.error("Uncaught exception:", error);
 });
 
-// Iniciar bot (apenas se não for importado como módulo)
-if (import.meta.url === `file://${process.argv[1]}`) {
-    init().catch(console.error);
+// Iniciar bot apenas se for executado diretamente (não importado)
+if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, "/")}`) {
+    (async () => {
+        try {
+            await init();
+        } catch (error) {
+            console.error("❌ Erro fatal ao iniciar bot:", error);
+            process.exit(1);
+        }
+    })();
 }

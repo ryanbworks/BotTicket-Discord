@@ -179,6 +179,12 @@ categories:
             minLength: 2
             maxLength: 50
             style: "short"
+          - label: "ID do jogador denunciado"
+            placeholder: "ID do jogador (somente números)"
+            required: true
+            minLength: 1
+            maxLength: 10
+            style: "short"
           - label: "Regra violada"
             placeholder: "Ex: RDM, VDM, Anti-RP, Metagaming, Powergaming..."
             required: true
@@ -569,6 +575,82 @@ alerts:
         Este ticket foi fechado automaticamente pois não houve resposta ao alerta enviado.
 
         Caso precise de mais assistência, abra um novo ticket na Central de Atendimento.
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │                     HORÁRIO DE ATENDIMENTO                                 │
+# │                                                                            │
+# │  enabled        → Ativa/desativa verificação de horário (true/false)      │
+# │  timezone       → Fuso horário (ex: "America/Sao_Paulo")                   │
+# │  allowOutside   → Permitir criar tickets fora do horário (true/false)     │
+# │                   Se true: cria ticket mas avisa que está fora do horário │
+# │                   Se false: bloqueia criação de ticket fora do horário    │
+# │                                                                            │
+# │  schedule       → Horários de funcionamento por dia                        │
+# │    day          → Dia da semana (0=Domingo, 1=Segunda, ..., 6=Sábado)    │
+# │    startHour    → Hora de início (0-23)                                    │
+# │    startMinute  → Minuto de início (0-59)                                  │
+# │    endHour      → Hora de fim (0-23)                                       │
+# │    endMinute    → Minuto de fim (0-59)                                     │
+# │                                                                            │
+# │  VARIÁVEIS DISPONÍVEIS em outsideMessage:                                  │
+# │    {user}     → Menção do usuário                                          │
+# │    {horario}  → Horário de funcionamento do dia                            │
+# │    {timezone} → Fuso horário configurado                                   │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+businessHours:
+    enabled: true
+    timezone: "America/Sao_Paulo"
+    allowOutside: true
+
+    # Horários de funcionamento (Segunda a Domingo: 14:00 às 22:00)
+    schedule:
+        - day: 0 # Domingo
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+        - day: 1 # Segunda-feira
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+        - day: 2 # Terça-feira
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+        - day: 3 # Quarta-feira
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+        - day: 4 # Quinta-feira
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+        - day: 5 # Sexta-feira
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+        - day: 6 # Sábado
+          startHour: 14
+          startMinute: 0
+          endHour: 22
+          endMinute: 0
+
+    outsideMessage: |
+        ## ⏰ Responderemos você em breve
+
+        Estamos fora do horário de atendimento. Nosso atendimento é de segunda a domingo das **14:00 às 22:00** (horário de Brasília), exceto feriados nacionais.
 
 autoClose:
     enabled: true

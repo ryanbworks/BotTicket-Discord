@@ -70,11 +70,20 @@ export async function execute(interaction, client) {
         } catch (error) {
             console.error("Erro ao processar modal:", error);
 
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    embeds: [errorEmbed("❌ Erro", "Ocorreu um erro ao processar este formulário.")],
-                    ephemeral: true,
-                });
+            try {
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        embeds: [errorEmbed("❌ Erro", "Ocorreu um erro ao processar este formulário.")],
+                        ephemeral: true,
+                    });
+                } else if (interaction.deferred) {
+                    await interaction.editReply({
+                        embeds: [errorEmbed("❌ Erro", "Ocorreu um erro ao processar este formulário.")],
+                    });
+                }
+            } catch (replyError) {
+                // Ignorar erros ao tentar responder
+                console.error("Não foi possível responder à interação:", replyError.message);
             }
         }
     }

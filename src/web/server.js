@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { dirname, join } from "path";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
+import { initDatabase } from "../lib/database.js";
 import {
     authenticateUser,
     authMiddleware,
@@ -16,6 +17,9 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Inicializar banco de dados
+await initDatabase();
 
 const app = express();
 const httpServer = createServer(app);

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { getDatabase } from "../lib/database.js";
+import { getPool } from "../lib/database.js";
 
 // Chave secreta para JWT (deve estar no .env em produção)
 const JWT_SECRET = process.env.JWT_SECRET || "fozbot-secret-key-change-in-production";
@@ -16,64 +16,67 @@ export async function verifyPassword(password, hash) {
 }
 
 // Verificar se é primeiro acesso (senha não definida)
-export function isFirstAccess(username) {
-    const db = getDatabase();
-    const user = db.prepare("SELECT password_hash FROM panel_users WHERE username = ?").get(username);
-    return user && user.password_hash === null;
+export async function isFirstAccess(username) {
+    const pool = getPool();
+    const [rows] = await pool.query("SELECT password_hash FROM panel_users WHERE username = ?", [username]);
+    return rows.length > 0 && rows[0].password_hash === null;
 }
 
 // Definir senha inicial
 export async function setInitialPassword(username, password) {
-    const db = getDatabase();
+    const pool = getPool();
     const passwordHash = await hashPassword(password);
 
-    const result = db
-        .prepare(
-            `
+    const [result] = await pool.query(
+        `
         UPDATE panel_users 
-        SET password_hash = ?, updated_at = CURRENT_TIMESTAMP 
+        SET password_hash = ?, updated_at = NOW() 
         WHERE username = ? AND password_hash IS NULL
-    `
-        )
-        .run(passwordHash, username);
+    `,
+        [passwordHash, username]
+    );
 
-    return result.changes > 0;
+    return result.affectedRows > 0;
 }
 
 // Alterar senha (apenas se já estiver autenticado)
 export async function changePassword(username, oldPassword, newPassword) {
-    const db = getDatabase();
-    const user = db.prepare("SELECT password_hash FROM panel_users WHERE username = ?").get(username);
+    const pool = getPool();
+    const [rows] = await pool.query("SELECT password_hash FROM panel_users WHERE username = ?", [username]);
 
-    if (!user || !user.password_hash) {
+    if (rows.length === 0 || !rows[0].password_hash) {
         return { success: false, error: "Usuário não encontrado" };
     }
 
+    const user = rows[0];
     const isValid = await verifyPassword(oldPassword, user.password_hash);
     if (!isValid) {
         return { success: false, error: "Senha atual incorreta" };
     }
 
     const newPasswordHash = await hashPassword(newPassword);
-    db.prepare(
+    await pool.query(
         `
         UPDATE panel_users 
-        SET password_hash = ?, updated_at = CURRENT_TIMESTAMP 
+        SET password_hash = ?, updated_at = NOW() 
         WHERE username = ?
-    `
-    ).run(newPasswordHash, username);
+    `,
+        [newPasswordHash, username]
+    );
 
     return { success: true };
 }
 
 // Autenticar usuário
 export async function authenticateUser(username, password) {
-    const db = getDatabase();
-    const user = db.prepare("SELECT username, password_hash FROM panel_users WHERE username = ?").get(username);
+    const pool = getPool();
+    const [rows] = await pool.query("SELECT username, password_hash FROM panel_users WHERE username = ?", [username]);
 
-    if (!user) {
+    if (rows.length === 0) {
         return null;
     }
+
+    const user = rows[0];
 
     // Se não tem senha definida (primeiro acesso), não permite login
     if (user.password_hash === null) {

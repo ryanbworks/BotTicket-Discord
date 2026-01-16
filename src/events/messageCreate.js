@@ -11,18 +11,18 @@ export async function execute(message, client) {
     if (!message.guild) return;
 
     // Verificar se é um canal de ticket
-    const ticket = getTicketByChannel(message.channel.id);
+    const ticket = await getTicketByChannel(message.channel.id);
     if (!ticket) return;
 
     // Atualizar último momento de atividade do ticket
-    updateLastMessage(message.channel.id);
+    await updateLastMessage(message.channel.id);
 
     // Se a mensagem for do usuário que criou o ticket, cancelar alertas pendentes
     if (message.author.id === ticket.user_id) {
-        const alert = getTicketAlert(ticket.id);
+        const alert = await getTicketAlert(ticket.id);
 
         if (alert && alert.status === "pending") {
-            cancelAlertOnResponse(ticket.id);
+            await cancelAlertOnResponse(ticket.id);
 
             // Notificar que o alerta foi cancelado
             await message.channel

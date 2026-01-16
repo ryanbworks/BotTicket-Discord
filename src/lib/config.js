@@ -204,6 +204,78 @@ export function getRatingsConfig() {
     return cfg.ratings || { enabled: false };
 }
 
+/**
+ * Obtém configurações de horário de atendimento
+ * @returns {Object} Configuração de horário
+ */
+export function getBusinessHoursConfig() {
+    const cfg = getConfig();
+    return cfg.businessHours || { enabled: false };
+}
+
+/**
+ * Verifica se está dentro do horário de atendimento
+ * @returns {Object} { isOpen: boolean, message: string, allowOutside: boolean }
+ */
+export function checkBusinessHours() {
+    const config = getBusinessHoursConfig();
+
+    if (!config.enabled) {
+        return { isOpen: true, message: null, allowOutside: true };
+    }
+
+    const timezone = config.timezone || "America/Sao_Paulo";
+    const now = new Date();
+
+    // Converter para o fuso horário configurado
+    const localTime = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
+    const currentDay = localTime.getDay(); // 0 = Domingo, 1 = Segunda, etc
+    const currentHour = localTime.getHours();
+    const currentMinute = localTime.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // Procurar horário do dia atual
+    const todaySchedule = config.schedule?.find(s => s.day === currentDay);
+
+    if (!todaySchedule) {
+        // Não tem horário configurado para hoje
+        return {
+            isOpen: false,
+            message: config.outsideMessage || "Estamos fora do horário de atendimento.",
+            allowOutside: config.allowOutside !== false,
+        };
+    }
+
+    const startTimeInMinutes = todaySchedule.startHour * 60 + todaySchedule.startMinute;
+    const endTimeInMinutes = todaySchedule.endHour * 60 + todaySchedule.endMinute;
+
+    const isOpen = currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
+
+    if (!isOpen) {
+        let message = config.outsideMessage || "Estamos fora do horário de atendimento.";
+        message = message
+            .replace("{timezone}", timezone)
+            .replace(
+                "{horario}",
+                `${String(todaySchedule.startHour).padStart(2, "0")}:${String(todaySchedule.startMinute).padStart(
+                    2,
+                    "0"
+                )} às ${String(todaySchedule.endHour).padStart(2, "0")}:${String(todaySchedule.endMinute).padStart(
+                    2,
+                    "0"
+                )}`
+            );
+
+        return {
+            isOpen: false,
+            message,
+            allowOutside: config.allowOutside !== false,
+        };
+    }
+
+    return { isOpen: true, message: null, allowOutside: true };
+}
+
 export default {
     loadConfig,
     getConfig,
@@ -217,4 +289,6 @@ export default {
     getTranscriptConfig,
     getAutoCloseConfig,
     getRatingsConfig,
+    getBusinessHoursConfig,
+    checkBusinessHours,
 };

@@ -1,131 +1,158 @@
-import Database from "better-sqlite3";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+import mysql from "mysql2/promise";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const dbPath = join(__dirname, "../../data/tickets.db");
+dotenv.config();
 
-let db = null;
+let pool = null;
 
 /**
- * Inicializa o banco de dados SQLite
+ * Cria o pool de conexões MySQL
  */
-export function initDatabase() {
-    db = new Database(dbPath);
-
-    // Criar tabelas
-    db.exec(`
-        -- Tabela de tickets
-        CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_number INTEGER NOT NULL,
-            channel_id TEXT UNIQUE NOT NULL,
-            guild_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            category_id TEXT NOT NULL,
-            status TEXT DEFAULT 'open',
-            claimed_by TEXT DEFAULT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            closed_at DATETIME DEFAULT NULL,
-            closed_by TEXT DEFAULT NULL,
-            close_reason TEXT DEFAULT NULL,
-            last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Tabela de membros do ticket
-        CREATE TABLE IF NOT EXISTS ticket_members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id INTEGER NOT NULL,
-            user_id TEXT NOT NULL,
-            added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            added_by TEXT,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-            UNIQUE(ticket_id, user_id)
-        );
-
-        -- Tabela de respostas do modal
-        CREATE TABLE IF NOT EXISTS ticket_responses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id INTEGER NOT NULL,
-            question TEXT NOT NULL,
-            answer TEXT NOT NULL,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-        );
-
-        -- Tabela de cooldowns
-        CREATE TABLE IF NOT EXISTS cooldowns (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            category_id TEXT NOT NULL,
-            expires_at DATETIME NOT NULL,
-            UNIQUE(user_id, category_id)
-        );
-
-        -- Tabela de configuração do servidor
-        CREATE TABLE IF NOT EXISTS guild_config (
-            guild_id TEXT PRIMARY KEY,
-            ticket_count INTEGER DEFAULT 0
-        );
-
-        -- Índices para performance
-        CREATE INDEX IF NOT EXISTS idx_tickets_channel ON tickets(channel_id);
-        CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
-        CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
-        CREATE INDEX IF NOT EXISTS idx_cooldowns_user ON cooldowns(user_id, category_id);
-
-        -- Tabela de avaliações
-        CREATE TABLE IF NOT EXISTS ticket_ratings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id INTEGER NOT NULL,
-            user_id TEXT NOT NULL,
-            rating INTEGER NOT NULL,
-            comment TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-        );
-
-        -- Tabela de alertas de tickets
-        CREATE TABLE IF NOT EXISTS ticket_alerts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id INTEGER NOT NULL,
-            alerted_by TEXT NOT NULL,
-            reason TEXT,
-            duration_minutes INTEGER NOT NULL,
-            expires_at DATETIME NOT NULL,
-            status TEXT DEFAULT 'pending',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-        );
-
-        -- Índice para alertas pendentes
-        CREATE INDEX IF NOT EXISTS idx_alerts_status ON ticket_alerts(status, expires_at);
-
-        -- Tabela de usuários do painel
-        CREATE TABLE IF NOT EXISTS panel_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT DEFAULT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Criar usuário admin se não existir
-        INSERT OR IGNORE INTO panel_users (username, password_hash) VALUES ('admin', NULL);
-    `);
-
-    console.log("✅ Banco de dados inicializado!");
-    return db;
+function createPool() {
+    return mysql.createPool({
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || "3306"),
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        timezone: "+00:00",
+    });
 }
 
 /**
- * Obtém a instância do banco de dados
+ * Inicializa o banco de dados MySQL
  */
-export function getDatabase() {
-    if (!db) {
-        return initDatabase();
+export async function initDatabase() {
+    pool = createPool();
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Criar tabelas
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS tickets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_number INT NOT NULL,
+                channel_id VARCHAR(255) UNIQUE NOT NULL,
+                guild_id VARCHAR(255) NOT NULL,
+                user_id VARCHAR(255) NOT NULL,
+                category_id VARCHAR(255) NOT NULL,
+                status VARCHAR(50) DEFAULT 'open',
+                claimed_by VARCHAR(255) DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                closed_at DATETIME DEFAULT NULL,
+                closed_by VARCHAR(255) DEFAULT NULL,
+                close_reason TEXT DEFAULT NULL,
+                last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_tickets_channel (channel_id),
+                INDEX idx_tickets_user (user_id),
+                INDEX idx_tickets_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ticket_members (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                user_id VARCHAR(255) NOT NULL,
+                added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                added_by VARCHAR(255),
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_ticket_user (ticket_id, user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ticket_responses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS cooldowns (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id VARCHAR(255) NOT NULL,
+                category_id VARCHAR(255) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                UNIQUE KEY unique_user_category (user_id, category_id),
+                INDEX idx_cooldowns_user (user_id, category_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS guild_config (
+                guild_id VARCHAR(255) PRIMARY KEY,
+                ticket_count INT DEFAULT 0
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ticket_ratings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                user_id VARCHAR(255) NOT NULL,
+                rating INT NOT NULL,
+                comment TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ticket_alerts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                alerted_by VARCHAR(255) NOT NULL,
+                reason TEXT,
+                duration_minutes INT NOT NULL,
+                expires_at DATETIME NOT NULL,
+                status VARCHAR(50) DEFAULT 'pending',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                INDEX idx_alerts_status (status, expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS panel_users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password_hash TEXT DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        // Criar usuário admin se não existir
+        await connection.query(`
+            INSERT IGNORE INTO panel_users (username, password_hash) 
+            VALUES ('admin', NULL)
+        `);
+
+        connection.release();
+        console.log("✅ Banco de dados MySQL inicializado!");
+        return pool;
+    } catch (error) {
+        console.error("❌ Erro ao inicializar banco de dados:", error);
+        throw error;
     }
-    return db;
+}
+
+/**
+ * Obtém o pool de conexões
+ */
+export function getPool() {
+    if (!pool) {
+        throw new Error("Database pool not initialized. Call initDatabase() first.");
+    }
+    return pool;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -135,173 +162,199 @@ export function getDatabase() {
 /**
  * Cria um novo ticket no banco de dados
  */
-export function createTicket(data) {
-    const db = getDatabase();
+export async function createTicket(data) {
+    const pool = getPool();
+    const connection = await pool.getConnection();
 
-    // Incrementar contador de tickets
-    const guildConfig = db.prepare("SELECT ticket_count FROM guild_config WHERE guild_id = ?").get(data.guildId);
-    let ticketNumber;
+    try {
+        await connection.beginTransaction();
 
-    if (guildConfig) {
-        ticketNumber = guildConfig.ticket_count + 1;
-        db.prepare("UPDATE guild_config SET ticket_count = ? WHERE guild_id = ?").run(ticketNumber, data.guildId);
-    } else {
-        ticketNumber = 1;
-        db.prepare("INSERT INTO guild_config (guild_id, ticket_count) VALUES (?, ?)").run(data.guildId, ticketNumber);
+        // Incrementar contador de tickets
+        const [guildConfig] = await connection.query("SELECT ticket_count FROM guild_config WHERE guild_id = ?", [
+            data.guildId,
+        ]);
+
+        let ticketNumber;
+        if (guildConfig.length > 0) {
+            ticketNumber = guildConfig[0].ticket_count + 1;
+            await connection.query("UPDATE guild_config SET ticket_count = ? WHERE guild_id = ?", [
+                ticketNumber,
+                data.guildId,
+            ]);
+        } else {
+            ticketNumber = 1;
+            await connection.query("INSERT INTO guild_config (guild_id, ticket_count) VALUES (?, ?)", [
+                data.guildId,
+                ticketNumber,
+            ]);
+        }
+
+        const [result] = await connection.query(
+            `
+            INSERT INTO tickets (ticket_number, channel_id, guild_id, user_id, category_id)
+            VALUES (?, ?, ?, ?, ?)
+        `,
+            [ticketNumber, data.channelId, data.guildId, data.userId, data.categoryId]
+        );
+
+        const ticketId = result.insertId;
+
+        // Adicionar o criador como membro
+        await connection.query(
+            `
+            INSERT INTO ticket_members (ticket_id, user_id, added_by)
+            VALUES (?, ?, ?)
+        `,
+            [ticketId, data.userId, data.userId]
+        );
+
+        await connection.commit();
+
+        return {
+            id: ticketId,
+            ticketNumber,
+            ...data,
+        };
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
     }
-
-    const stmt = db.prepare(`
-        INSERT INTO tickets (ticket_number, channel_id, guild_id, user_id, category_id)
-        VALUES (?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(ticketNumber, data.channelId, data.guildId, data.userId, data.categoryId);
-
-    // Adicionar o criador como membro
-    db.prepare(
-        `
-        INSERT INTO ticket_members (ticket_id, user_id, added_by)
-        VALUES (?, ?, ?)
-    `
-    ).run(result.lastInsertRowid, data.userId, data.userId);
-
-    return {
-        id: result.lastInsertRowid,
-        ticketNumber,
-        ...data,
-    };
 }
 
 /**
  * Obtém um ticket pelo ID do canal
  */
-export function getTicketByChannel(channelId) {
-    const db = getDatabase();
-    return db.prepare("SELECT * FROM tickets WHERE channel_id = ?").get(channelId);
+export async function getTicketByChannel(channelId) {
+    const pool = getPool();
+    const [rows] = await pool.query("SELECT * FROM tickets WHERE channel_id = ?", [channelId]);
+    return rows[0];
 }
 
 /**
  * Obtém um ticket pelo ID
  */
-export function getTicketById(ticketId) {
-    const db = getDatabase();
-    return db.prepare("SELECT * FROM tickets WHERE id = ?").get(ticketId);
+export async function getTicketById(ticketId) {
+    const pool = getPool();
+    const [rows] = await pool.query("SELECT * FROM tickets WHERE id = ?", [ticketId]);
+    return rows[0];
 }
 
 /**
  * Obtém tickets abertos de um usuário em uma categoria
  */
-export function getUserOpenTickets(userId, categoryId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function getUserOpenTickets(userId, categoryId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT * FROM tickets 
         WHERE user_id = ? AND category_id = ? AND status = 'open'
-    `
-        )
-        .all(userId, categoryId);
+    `,
+        [userId, categoryId]
+    );
+    return rows;
 }
 
 /**
  * Obtém todos os tickets abertos de uma categoria
  */
-export function getCategoryOpenTickets(categoryId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function getCategoryOpenTickets(categoryId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT * FROM tickets 
         WHERE category_id = ? AND status = 'open'
-    `
-        )
-        .all(categoryId);
+    `,
+        [categoryId]
+    );
+    return rows;
 }
 
 /**
  * Atualiza o status do ticket
  */
-export function updateTicketStatus(channelId, status, closedBy = null, reason = null) {
-    const db = getDatabase();
+export async function updateTicketStatus(channelId, status, closedBy = null, reason = null) {
+    const pool = getPool();
 
     if (status === "closed") {
-        return db
-            .prepare(
-                `
+        const [result] = await pool.query(
+            `
             UPDATE tickets 
-            SET status = ?, closed_at = CURRENT_TIMESTAMP, closed_by = ?, close_reason = ?
+            SET status = ?, closed_at = NOW(), closed_by = ?, close_reason = ?
             WHERE channel_id = ?
-        `
-            )
-            .run(status, closedBy, reason, channelId);
+        `,
+            [status, closedBy, reason, channelId]
+        );
+        return result;
     }
 
-    return db
-        .prepare(
-            `
+    const [result] = await pool.query(
+        `
         UPDATE tickets SET status = ? WHERE channel_id = ?
-    `
-        )
-        .run(status, channelId);
+    `,
+        [status, channelId]
+    );
+    return result;
 }
 
 /**
  * Define quem assumiu o ticket
  */
-export function claimTicket(channelId, userId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function claimTicket(channelId, userId) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `
         UPDATE tickets SET claimed_by = ? WHERE channel_id = ?
-    `
-        )
-        .run(userId, channelId);
+    `,
+        [userId, channelId]
+    );
+    return result;
 }
 
 /**
  * Remove o responsável do ticket
  */
-export function unclaimTicket(channelId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function unclaimTicket(channelId) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `
         UPDATE tickets SET claimed_by = NULL WHERE channel_id = ?
-    `
-        )
-        .run(channelId);
+    `,
+        [channelId]
+    );
+    return result;
 }
 
 /**
  * Atualiza timestamp da última mensagem
  */
-export function updateLastMessage(channelId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
-        UPDATE tickets SET last_message_at = CURRENT_TIMESTAMP WHERE channel_id = ?
-    `
-        )
-        .run(channelId);
+export async function updateLastMessage(channelId) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `
+        UPDATE tickets SET last_message_at = NOW() WHERE channel_id = ?
+    `,
+        [channelId]
+    );
+    return result;
 }
 
 /**
  * Obtém tickets inativos para auto-close
  */
-export function getInactiveTickets(inactivityMs) {
-    const db = getDatabase();
-    const threshold = new Date(Date.now() - inactivityMs).toISOString();
+export async function getInactiveTickets(inactivityMs) {
+    const pool = getPool();
+    const threshold = new Date(Date.now() - inactivityMs);
 
-    return db
-        .prepare(
-            `
+    const [rows] = await pool.query(
+        `
         SELECT * FROM tickets 
         WHERE status = 'open' AND last_message_at < ?
-    `
-        )
-        .all(threshold);
+    `,
+        [threshold]
+    );
+    return rows;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -311,65 +364,66 @@ export function getInactiveTickets(inactivityMs) {
 /**
  * Adiciona um membro ao ticket
  */
-export function addTicketMember(ticketId, userId, addedBy) {
-    const db = getDatabase();
+export async function addTicketMember(ticketId, userId, addedBy) {
+    const pool = getPool();
     try {
-        return db
-            .prepare(
-                `
+        const [result] = await pool.query(
+            `
             INSERT INTO ticket_members (ticket_id, user_id, added_by)
             VALUES (?, ?, ?)
-        `
-            )
-            .run(ticketId, userId, addedBy);
+        `,
+            [ticketId, userId, addedBy]
+        );
+        return result;
     } catch (error) {
-        // Já existe
-        return null;
+        // Já existe (duplicate key)
+        if (error.code === "ER_DUP_ENTRY") {
+            return null;
+        }
+        throw error;
     }
 }
 
 /**
  * Remove um membro do ticket
  */
-export function removeTicketMember(ticketId, userId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function removeTicketMember(ticketId, userId) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `
         DELETE FROM ticket_members WHERE ticket_id = ? AND user_id = ?
-    `
-        )
-        .run(ticketId, userId);
+    `,
+        [ticketId, userId]
+    );
+    return result;
 }
 
 /**
  * Obtém membros do ticket
  */
-export function getTicketMembers(ticketId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function getTicketMembers(ticketId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT * FROM ticket_members WHERE ticket_id = ?
-    `
-        )
-        .all(ticketId);
+    `,
+        [ticketId]
+    );
+    return rows;
 }
 
 /**
  * Verifica se usuário é membro do ticket
  */
-export function isTicketMember(ticketId, userId) {
-    const db = getDatabase();
-    return (
-        db
-            .prepare(
-                `
+export async function isTicketMember(ticketId, userId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT 1 FROM ticket_members WHERE ticket_id = ? AND user_id = ?
-    `
-            )
-            .get(ticketId, userId) !== undefined
+    `,
+        [ticketId, userId]
     );
+    return rows.length > 0;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -379,34 +433,44 @@ export function isTicketMember(ticketId, userId) {
 /**
  * Salva respostas do modal
  */
-export function saveTicketResponses(ticketId, responses) {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-        INSERT INTO ticket_responses (ticket_id, question, answer)
-        VALUES (?, ?, ?)
-    `);
+export async function saveTicketResponses(ticketId, responses) {
+    const pool = getPool();
+    const connection = await pool.getConnection();
 
-    const insertMany = db.transaction(items => {
-        for (const item of items) {
-            stmt.run(ticketId, item.question, item.answer);
+    try {
+        await connection.beginTransaction();
+
+        for (const item of responses) {
+            await connection.query(
+                `
+                INSERT INTO ticket_responses (ticket_id, question, answer)
+                VALUES (?, ?, ?)
+            `,
+                [ticketId, item.question, item.answer]
+            );
         }
-    });
 
-    insertMany(responses);
+        await connection.commit();
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
 }
 
 /**
  * Obtém respostas do ticket
  */
-export function getTicketResponses(ticketId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function getTicketResponses(ticketId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT * FROM ticket_responses WHERE ticket_id = ?
-    `
-        )
-        .all(ticketId);
+    `,
+        [ticketId]
+    );
+    return rows;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -416,19 +480,18 @@ export function getTicketResponses(ticketId) {
 /**
  * Verifica cooldown do usuário
  */
-export function checkCooldown(userId, categoryId) {
-    const db = getDatabase();
-    const cooldown = db
-        .prepare(
-            `
+export async function checkCooldown(userId, categoryId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT expires_at FROM cooldowns 
-        WHERE user_id = ? AND category_id = ? AND expires_at > datetime('now')
-    `
-        )
-        .get(userId, categoryId);
+        WHERE user_id = ? AND category_id = ? AND expires_at > NOW()
+    `,
+        [userId, categoryId]
+    );
 
-    if (cooldown) {
-        return new Date(cooldown.expires_at).getTime() - Date.now();
+    if (rows.length > 0) {
+        return new Date(rows[0].expires_at).getTime() - Date.now();
     }
     return 0;
 }
@@ -436,32 +499,32 @@ export function checkCooldown(userId, categoryId) {
 /**
  * Define cooldown do usuário
  */
-export function setCooldown(userId, categoryId, durationMs) {
-    const db = getDatabase();
-    const expiresAt = new Date(Date.now() + durationMs).toISOString();
+export async function setCooldown(userId, categoryId, durationMs) {
+    const pool = getPool();
+    const expiresAt = new Date(Date.now() + durationMs);
 
-    return db
-        .prepare(
-            `
-        INSERT OR REPLACE INTO cooldowns (user_id, category_id, expires_at)
+    const [result] = await pool.query(
+        `
+        INSERT INTO cooldowns (user_id, category_id, expires_at)
         VALUES (?, ?, ?)
-    `
-        )
-        .run(userId, categoryId, expiresAt);
+        ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
+    `,
+        [userId, categoryId, expiresAt]
+    );
+    return result;
 }
 
 /**
  * Limpa cooldowns expirados
  */
-export function cleanExpiredCooldowns() {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
-        DELETE FROM cooldowns WHERE expires_at < datetime('now')
+export async function cleanExpiredCooldowns() {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `
+        DELETE FROM cooldowns WHERE expires_at < NOW()
     `
-        )
-        .run();
+    );
+    return result;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -471,58 +534,57 @@ export function cleanExpiredCooldowns() {
 /**
  * Salva uma avaliação de ticket
  */
-export function saveTicketRating(ticketId, userId, rating, comment = null) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function saveTicketRating(ticketId, userId, rating, comment = null) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `
         INSERT INTO ticket_ratings (ticket_id, user_id, rating, comment)
         VALUES (?, ?, ?, ?)
-    `
-        )
-        .run(ticketId, userId, rating, comment);
+    `,
+        [ticketId, userId, rating, comment]
+    );
+    return result;
 }
 
 /**
  * Obtém avaliação de um ticket
  */
-export function getTicketRating(ticketId) {
-    const db = getDatabase();
-    return db.prepare("SELECT * FROM ticket_ratings WHERE ticket_id = ?").get(ticketId);
+export async function getTicketRating(ticketId) {
+    const pool = getPool();
+    const [rows] = await pool.query("SELECT * FROM ticket_ratings WHERE ticket_id = ?", [ticketId]);
+    return rows[0];
 }
 
 /**
  * Obtém todas as avaliações
  */
-export function getAllRatings(limit = 100) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function getAllRatings(limit = 100) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT r.*, t.ticket_number, t.category_id, t.claimed_by
         FROM ticket_ratings r
         JOIN tickets t ON r.ticket_id = t.id
         ORDER BY r.created_at DESC
         LIMIT ?
-    `
-        )
-        .all(limit);
+    `,
+        [limit]
+    );
+    return rows;
 }
 
 /**
  * Obtém média de avaliações
  */
-export function getAverageRating() {
-    const db = getDatabase();
-    const result = db
-        .prepare(
-            `
+export async function getAverageRating() {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT AVG(rating) as average, COUNT(*) as total
         FROM ticket_ratings
     `
-        )
-        .get();
-    return result;
+    );
+    return rows[0];
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -532,86 +594,104 @@ export function getAverageRating() {
 /**
  * Define um alerta para um ticket
  */
-export function setTicketAlert(ticketId, alertedBy, durationMinutes, reason = null) {
-    const db = getDatabase();
-    const expiresAt = new Date(Date.now() + durationMinutes * 60000).toISOString();
+export async function setTicketAlert(ticketId, alertedBy, durationMinutes, reason = null) {
+    const pool = getPool();
+    const connection = await pool.getConnection();
 
-    // Cancelar alertas anteriores pendentes
-    db.prepare(`UPDATE ticket_alerts SET status = 'cancelled' WHERE ticket_id = ? AND status = 'pending'`).run(
-        ticketId
-    );
+    try {
+        await connection.beginTransaction();
 
-    return db
-        .prepare(
+        const expiresAt = new Date(Date.now() + durationMinutes * 60000);
+
+        // Cancelar alertas anteriores pendentes
+        await connection.query(
+            `UPDATE ticket_alerts SET status = 'cancelled' WHERE ticket_id = ? AND status = 'pending'`,
+            [ticketId]
+        );
+
+        const [result] = await connection.query(
             `
-        INSERT INTO ticket_alerts (ticket_id, alerted_by, reason, duration_minutes, expires_at)
-        VALUES (?, ?, ?, ?, ?)
-    `
-        )
-        .run(ticketId, alertedBy, reason, durationMinutes, expiresAt);
+            INSERT INTO ticket_alerts (ticket_id, alerted_by, reason, duration_minutes, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+        `,
+            [ticketId, alertedBy, reason, durationMinutes, expiresAt]
+        );
+
+        await connection.commit();
+        return result;
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
 }
 
 /**
  * Obtém alerta ativo de um ticket
  */
-export function getTicketAlert(ticketId) {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `SELECT * FROM ticket_alerts WHERE ticket_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`
-        )
-        .get(ticketId);
+export async function getTicketAlert(ticketId) {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `SELECT * FROM ticket_alerts WHERE ticket_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`,
+        [ticketId]
+    );
+    return rows[0];
 }
 
 /**
  * Obtém todos os alertas expirados (pendentes)
  */
-export function getExpiredAlerts() {
-    const db = getDatabase();
-    return db
-        .prepare(
-            `
+export async function getExpiredAlerts() {
+    const pool = getPool();
+    const [rows] = await pool.query(
+        `
         SELECT a.*, t.channel_id, t.guild_id, t.user_id, t.ticket_number
         FROM ticket_alerts a
         JOIN tickets t ON a.ticket_id = t.id
-        WHERE a.status = 'pending' AND a.expires_at <= datetime('now')
+        WHERE a.status = 'pending' AND a.expires_at <= NOW()
         AND t.status = 'open'
     `
-        )
-        .all();
+    );
+    return rows;
 }
 
 /**
  * Cancela um alerta
  */
-export function cancelTicketAlert(ticketId) {
-    const db = getDatabase();
-    return db
-        .prepare(`UPDATE ticket_alerts SET status = 'cancelled' WHERE ticket_id = ? AND status = 'pending'`)
-        .run(ticketId);
+export async function cancelTicketAlert(ticketId) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `UPDATE ticket_alerts SET status = 'cancelled' WHERE ticket_id = ? AND status = 'pending'`,
+        [ticketId]
+    );
+    return result;
 }
 
 /**
  * Marca um alerta como executado
  */
-export function markAlertExecuted(alertId) {
-    const db = getDatabase();
-    return db.prepare(`UPDATE ticket_alerts SET status = 'executed' WHERE id = ?`).run(alertId);
+export async function markAlertExecuted(alertId) {
+    const pool = getPool();
+    const [result] = await pool.query(`UPDATE ticket_alerts SET status = 'executed' WHERE id = ?`, [alertId]);
+    return result;
 }
 
 /**
  * Cancela alertas de um ticket quando o usuário responde
  */
-export function cancelAlertOnResponse(ticketId) {
-    const db = getDatabase();
-    return db
-        .prepare(`UPDATE ticket_alerts SET status = 'cancelled' WHERE ticket_id = ? AND status = 'pending'`)
-        .run(ticketId);
+export async function cancelAlertOnResponse(ticketId) {
+    const pool = getPool();
+    const [result] = await pool.query(
+        `UPDATE ticket_alerts SET status = 'cancelled' WHERE ticket_id = ? AND status = 'pending'`,
+        [ticketId]
+    );
+    return result;
 }
 
 export default {
     initDatabase,
-    getDatabase,
+    getPool,
     createTicket,
     getTicketByChannel,
     getTicketById,

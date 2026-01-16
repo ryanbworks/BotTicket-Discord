@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
 
 export async function execute(interaction, client) {
-    const ticket = getTicketByChannel(interaction.channel.id);
+    const ticket = await getTicketByChannel(interaction.channel.id);
 
     if (!ticket) {
         await interaction.reply({
@@ -52,7 +52,7 @@ export async function execute(interaction, client) {
     }
 
     // Verificar se já existe um alerta ativo
-    const existingAlert = getTicketAlert(ticket.id);
+    const existingAlert = await getTicketAlert(ticket.id);
     if (existingAlert && existingAlert.status === "pending") {
         const expiresAt = new Date(existingAlert.expires_at);
         const timeLeft = Math.ceil((expiresAt - new Date()) / 60000);
@@ -77,14 +77,14 @@ export async function execute(interaction, client) {
     const expiresAt = new Date(Date.now() + tempoMinutos * 60000);
 
     // Salvar alerta no banco
-    setTicketAlert(ticket.id, interaction.user.id, tempoMinutos, motivo);
+    await setTicketAlert(ticket.id, interaction.user.id, tempoMinutos, motivo);
 
     // Buscar o usuário do ticket
     const ticketUser = await client.users.fetch(ticket.user_id).catch(() => null);
 
     // Criar embed de alerta
     const alertEmbed = new EmbedBuilder()
-        .setColor(colors.warning)
+        .setColor(colors.error)
         .setTitle("⚠️ Alerta de Inatividade")
         .setDescription(
             alertConfig.alertMessage ||

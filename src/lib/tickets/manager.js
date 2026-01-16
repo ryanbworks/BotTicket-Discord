@@ -8,7 +8,14 @@ import {
 } from "discord.js";
 import { formatTime } from "../../utils/embed.js";
 import { getLogger } from "../../utils/logger.js";
-import { getCategory, getColors, getMessage, getRatingsConfig, getTranscriptConfig } from "../config.js";
+import {
+    checkBusinessHours,
+    getCategory,
+    getColors,
+    getMessage,
+    getRatingsConfig,
+    getTranscriptConfig,
+} from "../config.js";
 import {
     addTicketMember,
     checkCooldown,
@@ -48,7 +55,7 @@ class TicketManager {
         }
 
         // Verificar cooldown
-        const cooldownRemaining = checkCooldown(user.id, categoryId);
+        const cooldownRemaining = await checkCooldown(user.id, categoryId);
         if (cooldownRemaining > 0) {
             return {
                 success: false,
@@ -57,13 +64,13 @@ class TicketManager {
         }
 
         // Verificar limite do usuário
-        const userTickets = getUserOpenTickets(user.id, categoryId);
+        const userTickets = await getUserOpenTickets(user.id, categoryId);
         if (userTickets.length >= (category.memberLimit || 1)) {
             return { success: false, error: getMessage("errors", "ticketLimitReached") };
         }
 
         // Verificar limite total
-        const categoryTickets = getCategoryOpenTickets(categoryId);
+        const categoryTickets = await getCategoryOpenTickets(categoryId);
         if (categoryTickets.length >= (category.totalLimit || 50)) {
             return { success: false, error: getMessage("errors", "totalLimitReached") };
         }
@@ -76,7 +83,7 @@ class TicketManager {
             }
 
             // Salvar no banco primeiro para obter o número
-            const ticketData = createTicket({
+            const ticketData = await createTicket({
                 guildId: guild.id,
                 userId: user.id,
                 categoryId: categoryId,
@@ -147,13 +154,13 @@ class TicketManager {
             });
 
             // Atualizar canal no banco
-            const db = (await import("../database.js")).getDatabase();
-            db.prepare("UPDATE tickets SET channel_id = ? WHERE id = ?").run(channel.id, ticketData.id);
+            const pool = (await import("../database.js")).getPool();
+            await pool.query("UPDATE tickets SET channel_id = ? WHERE id = ?", [channel.id, ticketData.id]);
             ticketData.channelId = channel.id;
 
             // Salvar respostas do modal
             if (responses.length > 0) {
-                saveTicketResponses(ticketData.id, responses);
+                await saveTicketResponses(ticketData.id, responses);
             }
 
             // Criar mensagem de abertura
@@ -175,9 +182,22 @@ class TicketManager {
                 components: [actionRow],
             });
 
+            // Verificar horário de atendimento
+            const businessHours = checkBusinessHours();
+            if (!businessHours.isOpen && businessHours.message) {
+                // Enviar mensagem de fora do horário como embed
+                const colors = getColors();
+                const outsideHoursEmbed = new EmbedBuilder()
+                    .setColor(colors.error)
+                    .setDescription(businessHours.message.replace("{user}", user.toString()))
+                    .setTimestamp();
+
+                await channel.send({ embeds: [outsideHoursEmbed] });
+            }
+
             // Definir cooldown
             if (category.cooldown) {
-                setCooldown(user.id, categoryId, category.cooldown);
+                await setCooldown(user.id, categoryId, category.cooldown);
             }
 
             // Log
@@ -214,7 +234,7 @@ class TicketManager {
             .replace("{category}", category.name);
 
         const embed = new EmbedBuilder()
-            .setColor(colors.primary)
+            .setColor(colors.error)
             .setAuthor({
                 name: `Ticket #${ticketNumber.toString().padStart(4, "0")}`,
                 iconURL: user.displayAvatarURL(),
@@ -271,7 +291,7 @@ class TicketManager {
      * Fecha um ticket
      */
     async close(channel, closedBy, reason = null) {
-        const ticket = getTicketByChannel(channel.id);
+        const ticket = await getTicketByChannel(channel.id);
         if (!ticket) {
             return { success: false, error: getMessage("errors", "ticketNotFound") };
         }
@@ -286,7 +306,7 @@ class TicketManager {
             }
 
             // Atualizar status no banco
-            updateTicketStatus(channel.id, "closed", closedBy.id, reason);
+            await updateTicketStatus(channel.id, "closed", closedBy.id, reason);
 
             // Log
             const logger = getLogger(this.client);
@@ -335,7 +355,7 @@ class TicketManager {
                 .replace("{user}", user.toString());
 
             const ratingEmbed = new EmbedBuilder()
-                .setColor(colors.primary)
+                .setColor(colors.error)
                 .setTitle("⭐ Avalie seu Atendimento")
                 .setDescription(description)
                 .addFields(
@@ -392,7 +412,7 @@ class TicketManager {
      * Assume um ticket
      */
     async claim(channel, staff) {
-        const ticket = getTicketByChannel(channel.id);
+        const ticket = await getTicketByChannel(channel.id);
         if (!ticket) {
             return { success: false, error: getMessage("errors", "ticketNotFound") };
         }
@@ -401,7 +421,7 @@ class TicketManager {
             return { success: false, error: getMessage("errors", "alreadyClaimed") };
         }
 
-        claimTicket(channel.id, staff.id);
+        await claimTicket(channel.id, staff.id);
 
         // Atualizar botões
         const messages = await channel.messages.fetch({ limit: 10 });
@@ -428,7 +448,7 @@ class TicketManager {
      * Libera um ticket assumido
      */
     async unclaim(channel, staff) {
-        const ticket = getTicketByChannel(channel.id);
+        const ticket = await getTicketByChannel(channel.id);
         if (!ticket) {
             return { success: false, error: getMessage("errors", "ticketNotFound") };
         }
@@ -441,7 +461,7 @@ class TicketManager {
             return { success: false, error: getMessage("errors", "cannotCloseOther") };
         }
 
-        unclaimTicket(channel.id);
+        await unclaimTicket(channel.id);
 
         // Atualizar botões
         const messages = await channel.messages.fetch({ limit: 10 });
@@ -468,12 +488,12 @@ class TicketManager {
      * Adiciona um usuário ao ticket
      */
     async addUser(channel, user, addedBy) {
-        const ticket = getTicketByChannel(channel.id);
+        const ticket = await getTicketByChannel(channel.id);
         if (!ticket) {
             return { success: false, error: getMessage("errors", "ticketNotFound") };
         }
 
-        const members = getTicketMembers(ticket.id);
+        const members = await getTicketMembers(ticket.id);
         if (members.some(m => m.user_id === user.id)) {
             return { success: false, error: getMessage("errors", "userAlreadyInTicket") };
         }
@@ -487,7 +507,7 @@ class TicketManager {
             EmbedLinks: true,
         });
 
-        addTicketMember(ticket.id, user.id, addedBy.id);
+        await addTicketMember(ticket.id, user.id, addedBy.id);
 
         // Log
         const logger = getLogger(this.client);
@@ -505,7 +525,7 @@ class TicketManager {
      * Remove um usuário do ticket
      */
     async removeUser(channel, user, removedBy) {
-        const ticket = getTicketByChannel(channel.id);
+        const ticket = await getTicketByChannel(channel.id);
         if (!ticket) {
             return { success: false, error: getMessage("errors", "ticketNotFound") };
         }
@@ -515,7 +535,7 @@ class TicketManager {
             return { success: false, error: "Não é possível remover o criador do ticket!" };
         }
 
-        const members = getTicketMembers(ticket.id);
+        const members = await getTicketMembers(ticket.id);
         if (!members.some(m => m.user_id === user.id)) {
             return { success: false, error: getMessage("errors", "userNotInTicket") };
         }
@@ -523,7 +543,7 @@ class TicketManager {
         // Remover permissões
         await channel.permissionOverwrites.delete(user.id);
 
-        removeTicketMember(ticket.id, user.id);
+        await removeTicketMember(ticket.id, user.id);
 
         // Log
         const logger = getLogger(this.client);

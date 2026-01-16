@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(interaction, client) {
-    const ticket = getTicketByChannel(interaction.channel.id);
+    const ticket = await getTicketByChannel(interaction.channel.id);
 
     if (!ticket) {
         await interaction.reply({

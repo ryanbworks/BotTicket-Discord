@@ -146,13 +146,21 @@ function createTicketModal(categoryId, category) {
  * Processa submissão do modal
  */
 async function handleTicketModalSubmit(interaction, client, categoryId) {
-    await interaction.deferReply({ ephemeral: true });
+    // Responder imediatamente para evitar timeout
+    try {
+        await interaction.deferReply({ ephemeral: true });
+    } catch (error) {
+        console.error("Erro ao fazer defer do modal:", error.message);
+        return;
+    }
 
     const category = getCategory(categoryId);
     if (!category) {
-        await interaction.editReply({
-            embeds: [errorEmbed("❌ Erro", "Categoria não encontrada!")],
-        });
+        await interaction
+            .editReply({
+                embeds: [errorEmbed("❌ Erro", "Categoria não encontrada!")],
+            })
+            .catch(() => {});
         return;
     }
 
@@ -226,7 +234,7 @@ async function createTicketDirect(interaction, client, categoryId) {
  * Mostra confirmação de fechamento
  */
 async function handleTicketClose(interaction, client) {
-    const ticket = getTicketByChannel(interaction.channel.id);
+    const ticket = await getTicketByChannel(interaction.channel.id);
 
     if (!ticket) {
         await interaction.reply({
@@ -342,7 +350,7 @@ async function handleTicketUnclaim(interaction, client) {
 async function handleTicketTranscript(interaction, client) {
     await interaction.deferReply({ ephemeral: true });
 
-    const ticket = getTicketByChannel(interaction.channel.id);
+    const ticket = await getTicketByChannel(interaction.channel.id);
 
     if (!ticket) {
         await interaction.editReply({
@@ -398,7 +406,7 @@ async function handleRatingButton(interaction, client) {
     const ticketId = parseInt(parts[2]);
 
     // Verificar se já avaliou
-    const existingRating = getTicketRating(ticketId);
+    const existingRating = await getTicketRating(ticketId);
     if (existingRating) {
         await interaction.reply({
             embeds: [errorEmbed("❌ Erro", "Você já avaliou este ticket!")],
@@ -408,7 +416,7 @@ async function handleRatingButton(interaction, client) {
     }
 
     // Verificar se o ticket existe
-    const ticket = getTicketById(ticketId);
+    const ticket = await getTicketById(ticketId);
     if (!ticket) {
         await interaction.reply({
             embeds: [errorEmbed("❌ Erro", "Ticket não encontrado!")],
@@ -448,7 +456,7 @@ async function handleRatingCommentModal(interaction, client) {
     const comment = interaction.fields.getTextInputValue("rating_comment") || null;
 
     // Verificar se já avaliou
-    const existingRating = getTicketRating(ticketId);
+    const existingRating = await getTicketRating(ticketId);
     if (existingRating) {
         await interaction.reply({
             embeds: [errorEmbed("❌ Erro", "Você já avaliou este ticket!")],
@@ -458,7 +466,7 @@ async function handleRatingCommentModal(interaction, client) {
     }
 
     // Salvar avaliação
-    saveTicketRating(ticketId, interaction.user.id, rating, comment);
+    await saveTicketRating(ticketId, interaction.user.id, rating, comment);
 
     const ratingsConfig = getRatingsConfig();
     const colors = getColors();
@@ -471,7 +479,7 @@ async function handleRatingCommentModal(interaction, client) {
         ratingsConfig.thankYouMessage || "Obrigado pela sua avaliação! Sua opinião é muito importante para nós.";
 
     const successEmbed = new EmbedBuilder()
-        .setColor(colors.success)
+        .setColor(colors.error)
         .setTitle("✅ Avaliação Registrada!")
         .setDescription(thankYouMessage)
         .addFields({ name: "⭐ Nota", value: `${stars} (${rating}/5)`, inline: true })
@@ -511,18 +519,18 @@ async function sendRatingToChannel(client, ticketId, user, rating, comment) {
         const channel = await client.channels.fetch(ratingsConfig.channelId);
         if (!channel) return;
 
-        const ticket = getTicketById(ticketId);
+        const ticket = await getTicketById(ticketId);
         const category = ticket ? getCategory(ticket.category_id) : null;
         const stars = "⭐".repeat(rating) + "☆".repeat(5 - rating);
 
         // Cor baseada na nota
         let embedColor;
         if (rating >= 4) embedColor = colors.success;
-        else if (rating === 3) embedColor = colors.warning;
+        else if (rating === 3) embedColor = colors.error;
         else embedColor = colors.error;
 
         const ratingEmbed = new EmbedBuilder()
-            .setColor(embedColor)
+            .setColor(colors.error)
             .setTitle("📊 Nova Avaliação de Ticket Recebida")
             .setDescription(
                 `**Um ticket foi avaliado! Veja os detalhes abaixo:**\n\n` +
