@@ -246,25 +246,48 @@ export function checkBusinessHours() {
         };
     }
 
-    const startTimeInMinutes = todaySchedule.startHour * 60 + todaySchedule.startMinute;
-    const endTimeInMinutes = todaySchedule.endHour * 60 + todaySchedule.endMinute;
+    // Suporte para múltiplos períodos por dia
+    let periods = [];
 
-    const isOpen = currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
+    // Verificar se usa o formato novo (com periods) ou antigo (startHour/endHour)
+    if (todaySchedule.periods && Array.isArray(todaySchedule.periods)) {
+        periods = todaySchedule.periods;
+    } else if (todaySchedule.startHour !== undefined && todaySchedule.endHour !== undefined) {
+        // Formato antigo - converter para array de períodos
+        periods = [
+            {
+                startHour: todaySchedule.startHour,
+                startMinute: todaySchedule.startMinute || 0,
+                endHour: todaySchedule.endHour,
+                endMinute: todaySchedule.endMinute || 0,
+            },
+        ];
+    }
+
+    // Verificar se está dentro de algum período
+    let isOpen = false;
+    for (const period of periods) {
+        const startTimeInMinutes = period.startHour * 60 + (period.startMinute || 0);
+        const endTimeInMinutes = period.endHour * 60 + (period.endMinute || 0);
+
+        if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes) {
+            isOpen = true;
+            break;
+        }
+    }
 
     if (!isOpen) {
         let message = config.outsideMessage || "Estamos fora do horário de atendimento.";
-        message = message
-            .replace("{timezone}", timezone)
-            .replace(
-                "{horario}",
-                `${String(todaySchedule.startHour).padStart(2, "0")}:${String(todaySchedule.startMinute).padStart(
-                    2,
-                    "0"
-                )} às ${String(todaySchedule.endHour).padStart(2, "0")}:${String(todaySchedule.endMinute).padStart(
-                    2,
-                    "0"
-                )}`
-            );
+
+        // Formatar horários para exibição
+        const horarios = periods
+            .map(
+                p =>
+                    `${String(p.startHour).padStart(2, "0")}:${String(p.startMinute || 0).padStart(2, "0")} às ${String(p.endHour).padStart(2, "0")}:${String(p.endMinute || 0).padStart(2, "0")}`,
+            )
+            .join(" e ");
+
+        message = message.replace("{timezone}", timezone).replace("{horario}", horarios);
 
         return {
             isOpen: false,

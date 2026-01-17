@@ -387,11 +387,20 @@ categories:
 # │                                                                            │
 # │  categories → Lista de IDs das categorias que aparecerão no painel         │
 # │              (use os "id" definidos nas categorias acima)                  │
+# │                                                                            │
+# │  autoRefresh → Ativa refresh automático do painel (true/false)            │
+# │                Quando ativado, o painel será reenviado automaticamente    │
+# │                no início de cada período de atendimento para resetar o    │
+# │                select menu e evitar bugs de seleção                        │
 # └────────────────────────────────────────────────────────────────────────────┘
 
 panels:
     - id: "main-panel"
       channelId: "1432224022271230053"
+
+      # Refresh automático do painel (true/false)
+      # Recomendado: true para painéis com selectMenu
+      autoRefresh: true
 
       # Tipo de seleção: "buttons" (botões) ou "selectMenu" (lista dropdown)
       type: "selectMenu"
@@ -400,7 +409,7 @@ panels:
 
       # Horário de atendimento exibido no painel
       # Defina os horários que sua equipe está disponível
-      horario: "14:00 às 22:00"
+      horario: "14:00 às 18:00 e 20:00 às 22:00"
 
       description: |
           Selecione abaixo a categoria correspondente à sua necessidade.
@@ -603,54 +612,90 @@ businessHours:
     timezone: "America/Sao_Paulo"
     allowOutside: true
 
-    # Horários de funcionamento (Segunda a Domingo: 14:00 às 22:00)
+    # Horários de funcionamento (Segunda a Domingo: 14:00 às 18:00 e 20:00 às 22:00)
+    # Agora suporta múltiplos períodos por dia usando "periods"
     schedule:
         - day: 0 # Domingo
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
         - day: 1 # Segunda-feira
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
         - day: 2 # Terça-feira
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
         - day: 3 # Quarta-feira
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
         - day: 4 # Quinta-feira
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
         - day: 5 # Sexta-feira
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
         - day: 6 # Sábado
-          startHour: 14
-          startMinute: 0
-          endHour: 22
-          endMinute: 0
+          periods:
+              - startHour: 14
+                startMinute: 0
+                endHour: 18
+                endMinute: 0
+              - startHour: 20
+                startMinute: 0
+                endHour: 22
+                endMinute: 0
 
     outsideMessage: |
         ## ⏰ Responderemos você em breve
 
-        Estamos fora do horário de atendimento. Nosso atendimento é de segunda a domingo das **14:00 às 22:00** (horário de Brasília), exceto feriados nacionais.
+        Estamos fora do horário de atendimento. Nosso atendimento é de segunda a domingo das **14:00 às 18:00** e **20:00 às 22:00** (horário de Brasília), exceto feriados nacionais.
 
 autoClose:
     enabled: true

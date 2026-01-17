@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { startAlertChecker } from "./lib/alertChecker.js";
 import { loadConfig } from "./lib/config.js";
 import { initDatabase } from "./lib/database.js";
+import { startPanelRefresher } from "./lib/panelRefresher.js";
 import { getTicketManager } from "./lib/tickets/manager.js";
 import { getLogger } from "./utils/logger.js";
 
@@ -121,6 +122,7 @@ async function init() {
         getTicketManager(client);
         getLogger(client);
         startAlertChecker(client);
+        startPanelRefresher(client);
     });
 
     try {
