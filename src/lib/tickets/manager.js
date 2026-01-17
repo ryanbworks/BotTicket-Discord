@@ -568,8 +568,19 @@ let managerInstance = null;
 export function getTicketManager(client) {
     if (!managerInstance && client) {
         managerInstance = new TicketManager(client);
+    } else if (managerInstance && client && managerInstance.client !== client) {
+        // Se o cliente mudou (bot foi reiniciado), criar nova instância
+        managerInstance = new TicketManager(client);
     }
     return managerInstance;
+}
+
+/**
+ * Reseta a instância do gerenciador
+ * Útil quando o bot é reiniciado
+ */
+export function resetTicketManager() {
+    managerInstance = null;
 }
 
 export default TicketManager;

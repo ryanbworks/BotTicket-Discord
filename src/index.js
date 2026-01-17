@@ -95,6 +95,12 @@ async function init() {
     if (currentClient && currentClient.isReady()) {
         console.log("⚠️  Destruindo cliente anterior...");
         await currentClient.destroy();
+
+        // Resetar instâncias singleton que dependem do cliente
+        const { resetTicketManager } = await import("./lib/tickets/manager.js");
+        const { resetLogger } = await import("./utils/logger.js");
+        resetTicketManager();
+        resetLogger();
     }
 
     // Criar novo cliente

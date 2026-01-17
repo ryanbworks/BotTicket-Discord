@@ -167,8 +167,19 @@ let loggerInstance = null;
 export function getLogger(client) {
     if (!loggerInstance && client) {
         loggerInstance = new TicketLogger(client);
+    } else if (loggerInstance && client && loggerInstance.client !== client) {
+        // Se o cliente mudou (bot foi reiniciado), criar nova instância
+        loggerInstance = new TicketLogger(client);
     }
     return loggerInstance;
+}
+
+/**
+ * Reseta a instância do logger
+ * Útil quando o bot é reiniciado
+ */
+export function resetLogger() {
+    loggerInstance = null;
 }
 
 export default TicketLogger;
